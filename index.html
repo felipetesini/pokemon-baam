@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon BAAM!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&family=Roboto:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1f2a38;
+            --card-hover: #2c3e50;
+            --pokemon-yellow: #ffcb05;
+            --pokemon-blue: #3bcca6;
+            --text-light: #FFFFFF;
+            --points-green: #00b84c;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 3rem;
+            color: var(--pokemon-yellow);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 203, 5, 0.6);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+
+        /* Grid de Cartas */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 2px solid #34495e;
+            border-radius: 10px;
+            aspect-ratio: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card:hover {
+            background-color: var(--card-hover);
+            transform: scale(1.05);
+            border-color: var(--pokemon-yellow);
+            color: var(--pokemon-yellow);
+        }
+
+        .card.clicked {
+            background-color: #1a1a1a;
+            border-color: #1a1a1a;
+            color: #444;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Modal Padrão */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: #1c2833;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            border: 3px solid #34495e;
+            position: relative;
+            transform: scale(0.8);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-points {
+            color: var(--points-green);
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .modal-question {
+            font-size: 2rem;
+            margin-bottom: 30px;
+        }
+
+        .modal-answer {
+            font-size: 1.2rem;
+            color: #ddd;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* Estilo Específico BAAM */
+        .modal-content.baam-style {
+            border-color: #e74c3c;
+            background: radial-gradient(circle, #512e2f 0%, #1a1111 100%);
+        }
+
+        .baam-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 4rem;
+            color: #e74c3c;
+            text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff;
+            margin: 0 0 20px 0;
+            transform: rotate(-5deg);
+        }
+
+        .baam-loss {
+            color: #ff6b6b;
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Pokémon BAAM!</h1>
+    <div class="subtitle">Escolha um número. Cuidado com os Team Rockets (BAAMs)!</div>
+
+    <div class="grid" id="grid"></div>
+
+    <!-- Modal para Perguntas e BAAM -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content" id="modal-box">
+            <div id="modal-points" class="modal-points"></div>
+            <div id="modal-question" class="modal-question"></div>
+            <div id="modal-answer" class="modal-answer"></div>
+            
+            <button class="btn" id="btn-reveal" onclick="revealAnswer()">Revelar Resposta</button>
+            <button class="btn" onclick="closeModal()">🏠 Voltar para o Tabuleiro</button>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            { q: "Qual é o Pokémon número #025 na Pokédex Nacional?", a: "Pikachu", pts: 5 },
+            { q: "Qual tipo é super efetivo contra Pokémon do tipo Água?", a: "Elétrico e Planta", pts: 10 },
+            { q: "Quem é a evolucão final do Charmander?", a: "Charizard", pts: 5 },
+            { q: "Qual foi a primeira região introduzida na Geração 1?", a: "Kanto", pts: 10 },
+            { q: "Qual Pokémon lendário é conhecido por conseguir voltar no tempo e criar ilusões?", a: "Celebi", pts: 20 },
+            { q: "Qual item é usado para capturar Pokémon sem falhar em batalhas especiais ou garantir captura?", a: "Master Ball", pts: 10 },
+            { q: "Quantos tipos elementais existiam originalmente na Geração 1?", a: "15 tipos", pts: 20 },
+            { q: "Qual o nome do professor que dá o primeiro Pokémon em Kanto?", a: "Professor Carvalho (Oak)", pts: 5 },
+            { q: "Qual Eeveelution do tipo Fágua/Água se chama Vaporeon, e do tipo Fogo...?", a: "Flareon", pts: 10 },
+            { q: "Qual Pokémon fantasma é conhecido por ter uma caveira na cabeça e ser muito solitário?", a: "Cubone", pts: 15 },
+            { q: "Qual é o Pokémon do tipo Dragão/Voador mascote da capa de Pokémon Rayquaza... digo, de qual jogo?", a: "Pokémon Emerald", pts: 15 },
+            { q: "Qual o nome da Equipe vilã clássica de Kanto liderada por Giovanni?", a: "Team Rocket", pts: 5 },
+            { q: "Qual tipo tem imunidade completa contra ataques do tipo Psíquico?", a: "Tipo Sombrio (Dark)", pts: 20 },
+            { q: "Qual Pokémon gordinho e rosa é famoso por dormir o dia todo bloqueando estradas?", a: "Snorlax", pts: 10 },
+            { q: "Qual é a evolução do Eevee baseada em alta amizade durante o dia?", a: "Espeon", pts: 15 },
+            { q: "Qual o nome do golpe característico do Pikachu?", a: "Choque do Trovão (Thunderbolt / Volt Tackle)", pts: 10 },
+            { q: "Em qual região se passa a aventura de Pokémon Gold e Silver (Geração 2)?", a: "Johto", pts: 10 },
+            { q: "Qual é o único Pokémon que pode se transformar em qualquer outro usando o golpe Transform?", a: "Ditto", pts: 15 },
+            { q: "Qual é o peso do Snorlax na Pokédex (aproximadamente)?", a: "Mais de 460 kg", pts: 20 }
+        ];
+
+        let gameDeck = [...questions];
+        for (let i = 0; i < 6; i++) {
+            let randomLoss = Math.floor(Math.random() * 8) + 3; // Perda de 3 a 10 pontos
+            gameDeck.push({ type: 'baam', loss: randomLoss });
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        shuffle(gameDeck);
+
+        const grid = document.getElementById('grid');
+        const modal = document.getElementById('modal');
+        const modalBox = document.getElementById('modal-box');
+        const modPoints = document.getElementById('modal-points');
+        const modQuestion = document.getElementById('modal-question');
+        const modAnswer = document.getElementById('modal-answer');
+        const btnReveal = document.getElementById('btn-reveal');
+
+        for (let i = 0; i < 25; i++) {
+            let card = document.createElement('div');
+            card.classList.add('card');
+            card.innerText = i + 1;
+            
+            card.onclick = function() {
+                if(this.classList.contains('clicked')) return;
+                this.classList.add('clicked');
+                this.innerText = "X";
+                openModal(gameDeck[i]);
+            };
+            
+            grid.appendChild(card);
+        }
+
+        function openModal(data) {
+            modal.classList.add('active');
+            modAnswer.style.display = 'none';
+            
+            if (data.type === 'baam') {
+                modalBox.classList.add('baam-style');
+                modPoints.innerText = "";
+                modQuestion.innerHTML = `<h2 class='baam-title'>BAAM!</h2><p>A Equipe Rocket roubou seus planos!</p><div class='baam-loss'>Sua equipe perdeu ${data.loss} pontos!</div>`;
+                btnReveal.style.display = 'none';
+            } else {
+                modalBox.classList.remove('baam-style');
+                modPoints.innerText = `Valendo: ${data.pts} Pontos`;
+                modQuestion.innerText = data.q;
+                modAnswer.innerText = `Resposta: ${data.a}`;
+                btnReveal.style.display = 'inline-block';
+            }
+        }
+
+        function revealAnswer() {
+            modAnswer.style.display = 'block';
+            btnReveal.style.display = 'none';
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+    </script>
+</body>
+</html>
